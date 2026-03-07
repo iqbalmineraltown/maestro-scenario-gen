@@ -11,13 +11,13 @@ A Claude Code skill for generating Maestro E2E test scenarios from Flutter code 
 
 ## Installation
 
-### Using npx (Recommended)
+### Using OpenSkills (Recommended)
 
 ```bash
-npx openskill https://github.com/iqbalmineraltown/maestro-scenario-gen
+npx openskills install iqbalmineraltown/maestro-scenario-gen
 ```
 
-That's it! Through skill will be installed and ready to use in Claude Code.
+That's it! The skill will be installed and ready to use in Claude Code.
 
 ### Manual Install
 
@@ -25,19 +25,6 @@ That's it! Through skill will be installed and ready to use in Claude Code.
 # Clone the repository
 git clone https://github.com/iqbalmineraltown/maestro-scenario-gen.git
 cp -r maestro-scenario-gen/* ~/.claude/skills/maestro-scenario-gen/
-```
-
-## Using OpenSkill CLI
-
-The `openskill` package can install any Claude Code skill from GitHub:
-
-```bash
-# Install a skill
-npx openskill https://github.com/user/skill-repo
-npx openskill user/skill-repo
-
-# List installed skills
-npx openskill --list
 ```
 
 ## Usage
@@ -78,8 +65,6 @@ python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py com.ex
 maestro-scenario-gen/
 ├── SKILL.md              # Main skill documentation
 ├── README.md             # This file
-├── package.json          # npm package definition
-├── cli.js                # OpenSkill CLI
 ├── scripts/
 │   ├── analyze_widgets.py    # Widget analysis script
 │   └── generate_scenario.py  # Scenario generation script
