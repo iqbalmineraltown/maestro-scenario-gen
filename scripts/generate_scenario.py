@@ -355,7 +355,267 @@ FLOW_GENERATORS = {
     'list': generate_list_interaction_flow,
     'undo-redo': generate_undo_redo_flow,
     'dialog': generate_dialog_flow,
+    # Game-specific flows for Terraforming Mars Player Board
+    'production-phase': generate_production_phase_flow,
+    'game-reset': generate_game_reset_flow,
+    'history': generate_history_navigation_flow,
+    'boundary': generate_boundary_test_flow,
+    'state-persistence': generate_state_persistence_flow,
+    'accessibility': generate_accessibility_flow,
+    'conditional': generate_conditional_flow,
+    'rapid-ops': generate_rapid_operations_flow,
+    'cancel-dialog': generate_cancel_dialog_flow,
 }
+
+
+# =============================================================================
+# GAME-SPECIFIC FLOW TEMPLATES (Terraforming Mars)
+# =============================================================================
+
+def generate_production_phase_flow(app_id: str) -> str:
+    """Generate a production phase flow for Terraforming Mars."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Production Phase Flow",
+        description="Test production phase with resource collection",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Setup: Add some production values
+            TestStep(action='tapOn', target='mc_prod_inc_1', target_type='id', comment='Set MC production'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='tapOn', target='steel_prod_inc_1', target_type='id', comment='Set Steel production'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='tapOn', target='energy_prod_inc_1', target_type='id', comment='Set Energy production'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Trigger production phase
+            TestStep(action='tapOn', target='generation_increment', target_type='id', comment='Start production phase'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertVisible', target='Production Phase', target_type='text', comment='Verify dialog shown'),
+            TestStep(action='tapOn', target='Confirm', target_type='text', comment='Confirm production phase'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=1000),
+            # Verify generation incremented
+            TestStep(action='assertVisible', target='generation_display', target_type='id', comment='Verify generation display'),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_game_reset_flow(app_id: str) -> str:
+    """Generate a game reset flow with confirmation dialog."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Game Reset Flow",
+        description="Test game reset with confirmation dialog",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Make some changes first
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id', comment='Add MC'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='tapOn', target='tr_increment', target_type='id', comment='Increase TR'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Trigger reset
+            TestStep(action='tapOn', target='reset_button', target_type='id', comment='Tap reset button'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertVisible', target='Reset Game?', target_type='text', comment='Verify dialog'),
+            TestStep(action='tapOn', target='reset_confirm_button', target_type='id', comment='Confirm reset'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Verify state is reset
+            TestStep(action='assertVisible', target='generation_display', target_type='id', comment='Verify game reset'),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_history_navigation_flow(app_id: str) -> str:
+    """Generate a history navigation flow."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="History Navigation Flow",
+        description="Test action history screen navigation",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Make some actions to populate history
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id', comment='Action 1'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=300),
+            TestStep(action='tapOn', target='steel_amount_inc_5', target_type='id', comment='Action 2'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=300),
+            # Navigate to history
+            TestStep(action='tapOn', target='history_button', target_type='id', comment='Open history'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertVisible', target='Action History', target_type='text', comment='Verify history screen'),
+            # Navigate back
+            TestStep(action='back', target='', target_type='text', comment='Go back'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertVisible', target='generation_display', target_type='id', comment='Back on main screen'),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_boundary_test_flow(app_id: str) -> str:
+    """Generate a boundary value test flow."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Boundary Value Tests",
+        description="Test minimum and maximum resource values",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Test minimum boundary (decrement from 0)
+            TestStep(action='tapOn', target='mc_amount_dec_10', target_type='id', comment='Decrement from 0'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Test large value increment
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id', comment='Add 10'),
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id', comment='Add 50 total'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Test production boundaries
+            TestStep(action='tapOn', target='steel_prod_inc_1', target_type='id', comment='Increment production'),
+            TestStep(action='tapOn', target='steel_prod_inc_1', target_type='id'),
+            TestStep(action='tapOn', target='steel_prod_inc_1', target_type='id'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='tapOn', target='steel_prod_dec_1', target_type='id', comment='Decrement production'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_state_persistence_flow(app_id: str) -> str:
+    """Generate a state persistence test flow."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="State Persistence Test",
+        description="Verify state persists across app restart",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Make changes
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id', comment='Add MC'),
+            TestStep(action='tapOn', target='steel_amount_inc_5', target_type='id', comment='Add Steel'),
+            TestStep(action='tapOn', target='tr_increment', target_type='id', comment='Increase TR'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Kill and restart app
+            TestStep(action='killApp', target='', target_type='text', comment='Kill app'),
+            TestStep(action='launchApp', target='', target_type='text', comment='Restart app'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Verify state persisted
+            TestStep(action='assertVisible', target='generation_display', target_type='id', comment='Verify state loaded'),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_accessibility_flow(app_id: str) -> str:
+    """Generate an accessibility test flow for screen readers."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Accessibility Test",
+        description="Verify screen reader accessibility",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Verify semantic labels exist
+            TestStep(action='assertVisible', target='generation_display', target_type='id', comment='Generation display has semantics'),
+            TestStep(action='assertVisible', target='tr_display', target_type='id', comment='TR display has semantics'),
+            TestStep(action='assertVisible', target='undo_button', target_type='id', comment='Undo button has semantics'),
+            TestStep(action='assertVisible', target='redo_button', target_type='id', comment='Redo button has semantics'),
+            TestStep(action='assertVisible', target='reset_button', target_type='id', comment='Reset button has semantics'),
+            TestStep(action='assertVisible', target='history_button', target_type='id', comment='History button has semantics'),
+            # Verify resource cards have semantic identifiers
+            TestStep(action='assertVisible', target='resource_card_mc', target_type='id', comment='MC card has semantics'),
+            TestStep(action='assertVisible', target='resource_card_steel', target_type='id', comment='Steel card has semantics'),
+            TestStep(action='assertVisible', target='resource_card_titanium', target_type='id', comment='Titanium card has semantics'),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_conditional_flow(app_id: str) -> str:
+    """Generate a conditional flow test (when X vs when not)."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Conditional Flow Test",
+        description="Test conditional logic branches",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Test: When undo is NOT available (no actions yet)
+            TestStep(action='assertVisible', target='undo_button', target_type='id', comment='Undo button visible'),
+            # Make an action
+            TestStep(action='tapOn', target='mc_amount_inc_10', target_type='id', comment='Make an action'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Now undo should be available
+            TestStep(action='tapOn', target='undo_button', target_type='id', comment='Undo available now'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            # Now redo should be available
+            TestStep(action='tapOn', target='redo_button', target_type='id', comment='Redo available now'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_rapid_operations_flow(app_id: str) -> str:
+    """Generate a rapid operations test flow."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Rapid Operations Test",
+        description="Test rapid button tapping",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Rapid tapping without waits
+            TestStep(action='tapOn', target='mc_amount_inc_1', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_1', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_1', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_1', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_inc_1', target_type='id'),
+            # Wait for all operations to settle
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=1000),
+            # Rapid decrement operations
+            TestStep(action='tapOn', target='mc_amount_dec_1', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_dec_1', target_type='id'),
+            TestStep(action='tapOn', target='mc_amount_dec_1', target_type='id'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=1000),
+            # Verify UI is still responsive
+            TestStep(action='assertVisible', target='generation_display', target_type='id', comment='UI still responsive'),
+        ]
+    )
+    return generate_scenario(config)
+
+
+def generate_cancel_dialog_flow(app_id: str) -> str:
+    """Generate a cancel dialog test flow."""
+    config = ScenarioConfig(
+        app_id=app_id,
+        name="Cancel Dialog Test",
+        description="Test canceling confirmation dialogs",
+        steps=[
+            TestStep(action='launchApp', target='', target_type='text'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=3000),
+            # Test canceling production phase dialog
+            TestStep(action='tapOn', target='generation_increment', target_type='id', comment='Open production dialog'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertVisible', target='Production Phase', target_type='text', comment='Verify dialog'),
+            TestStep(action='tapOn', target='Cancel', target_type='text', comment='Cancel dialog'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertNotVisible', target='Production Phase', target_type='text', comment='Dialog dismissed'),
+            # Test canceling reset dialog
+            TestStep(action='tapOn', target='reset_button', target_type='id', comment='Open reset dialog'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertVisible', target='Reset Game?', target_type='text', comment='Verify dialog'),
+            TestStep(action='tapOn', target='reset_cancel_button', target_type='id', comment='Cancel reset'),
+            TestStep(action='waitForAnimationToEnd', target='', target_type='text', wait_after=500),
+            TestStep(action='assertNotVisible', target='Reset Game?', target_type='text', comment='Dialog dismissed'),
+        ]
+    )
+    return generate_scenario(config)
 
 
 def list_available_flows():
@@ -373,6 +633,16 @@ def list_available_flows():
     print("    form     - Form input and submission")
     print("    list     - List scrolling and item interaction")
     print("    dialog   - Dialog display and interaction")
+    print("\n  Terraforming Mars Specific:")
+    print("    production-phase - Production phase flow")
+    print("    game-reset       - Game reset with confirmation")
+    print("    history          - History screen navigation")
+    print("    boundary         - Boundary value testing")
+    print("    state-persistence - App state persistence")
+    print("    accessibility    - Screen reader testing")
+    print("    conditional      - When X vs when not to test")
+    print("    rapid-ops        - Rapid button tapping")
+    print("    cancel-dialog    - Cancel confirmation dialogs")
 
 
 def generate_from_analysis(app_id: str, analysis_file: str) -> str:

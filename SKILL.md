@@ -393,6 +393,182 @@ When debugging test failures:
 4. **Keep scenarios focused** - One user flow per file
 5. **Name identifiers descriptively** - `submit_order_button` not `btn1`
 
+## Game-Specific Testing Patterns
+
+### Terraforming Mars Player Board
+
+This Flutter app has unique patterns that require specific test coverage:
+
+#### Resource Management Patterns
+```yaml
+# Resources have amount and production values
+- assertVisible:
+    id: "resource_card_mc"
+- assertVisible:
+    id: "mc_amount_inc_1"
+- assertVisible:
+    id: "mc_prod_inc_1"
+
+# All resources follow this pattern:
+# mc, steel, titanium, plants, energy, heat
+# Buttons: _amount_inc_1, _amount_inc_5, _amount_inc_10
+#           _amount_dec_1, _amount_dec_5, _amount_dec_10
+#           _prod_inc_1, _prod_dec_1 (production only has +/-1)
+```
+
+#### Generation Tracking Pattern
+```yaml
+# Generation can only increment via production phase
+- tapOn:
+    id: "generation_increment"
+- assertVisible: "Production Phase"
+- tapOn: "Confirm"
+- assertVisible:
+    id: "generation_display"
+```
+
+#### Terraform Rating (TR) Pattern
+```yaml
+# TR can be incremented or decremented
+- tapOn:
+    id: "tr_increment"
+- tapOn:
+    id: "tr_decrement"
+```
+
+#### Production Phase Flow
+```yaml
+# Production phase adds resources based on production values
+# Energy converts to Heat
+# MC gets production + TR
+- tapOn:
+    id: "generation_increment"
+- waitForAnimationToEnd:
+    timeout: 500
+- assertVisible: "Production Phase"
+- tapOn: "Confirm"
+- waitForAnimationToEnd:
+    timeout: 1000
+```
+
+## Conditional Flow Patterns
+
+### When X vs When Not To Test
+Test both branches of conditional logic:
+
+```yaml
+# When a condition should be TRUE
+- assertTrue:
+    condition: "${resource_amount} > 0"
+
+# When a condition should be FALSE
+- assertNotVisible: "Error Message"
+```
+
+### Retry and Backoff Strategies
+For flaky elements, use retry patterns:
+
+```yaml
+- runFlow:
+    when:
+      visible: "Loading"
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 2000
+```
+
+## Edge Case Testing Strategies
+
+### Boundary Value Testing
+```yaml
+# Test minimum values (should not go below 0)
+- tapOn:
+    id: "mc_amount_dec_10"
+- tapOn:
+    id: "mc_amount_dec_10"
+# Verify value is 0, not negative
+
+# Test maximum values (stress test)
+- repeat:
+    times: 100
+    commands:
+      - tapOn:
+          id: "mc_amount_inc_10"
+```
+
+### Empty State Testing
+```yaml
+# Test empty history
+- tapOn:
+    id: "history_button"
+- assertVisible: "No actions yet"
+- pressBack
+```
+
+### Cancel Dialog Testing
+```yaml
+# Test canceling dialogs
+- tapOn:
+    id: "reset_button"
+- assertVisible: "Reset Game?"
+- tapOn: "Cancel"
+- assertNotVisible: "Reset Game?"
+```
+
+### Rapid Interaction Testing
+```yaml
+# Rapid button tapping
+- repeat:
+    times: 10
+    commands:
+      - tapOn:
+          id: "mc_amount_inc_1"
+```
+
+## Self-Healing Error Patterns (Game Apps)
+
+### Element Not Found After State Change
+```yaml
+# If resource display not found, wait for animation
+- extendedWaitUntil:
+    visible:
+      id: "generation_display"
+    timeout: 5000
+```
+
+### Dialog Not Dismissing
+```yaml
+# If dialog doesn't dismiss, try again
+- runFlow:
+    when:
+      visible: "Confirm"
+    commands:
+      - tapOn: "Confirm"
+```
+
+### State Synchronization
+```yaml
+# Wait for state to update before next action
+- tapOn:
+    id: "mc_amount_inc_10"
+- waitForAnimationToEnd:
+    timeout: 500
+```
+
+## Assertion Verification
+
+### Verify State After Actions
+```yaml
+# After incrementing MC by 10
+- tapOn:
+    id: "mc_amount_inc_10"
+- waitForAnimationToEnd:
+    timeout: 500
+# Note: Maestro can't read actual values, but we can verify UI state
+- assertVisible:
+    id: "mc_amount_display"
+```
+
 ## Helper Scripts
 
 ### analyze_widgets.py
