@@ -1,20 +1,20 @@
 # Maestro Scenario Generator
 
-A skill for generating Maestro E2E test scenarios from Flutter code with self-healing capabilities.
+A Claude Code skill for generating Maestro E2E test scenarios from Flutter code with self-healing capabilities.
 
 ## Features
 
 - **Widget Analysis**: Detects Flutter widgets that need semantic identifiers for Maestro testing
 - **Scenario Generation**: Creates Maestro YAML test flows from templates
-- **Self-Healing**: Diagnostic guidance for fixing failing tests
-- **Multiple Flow Types**: Supports login, signup, game, resource, navigation, form, list, undo-redo, and dialog flows
+- **Self-Healing Guidance**: Diagnostic help for fixing failing tests
+- **Multiple Flow Types**: login, signup, game, resource, navigation, form, list, undo-redo, dialog
 
 ## Installation
 
-Copy the skill to your Claude Code skills directory:
-
 ```bash
-cp -r . ~/.claude/skills/maestro-scenario-gen/
+# Clone or copy to your Claude Code skills directory
+git clone https://github.com/iqbalmineraltown/maestro-scenario-gen.git
+cp -r maestro-scenario-gen/* ~/.claude/skills/maestro-scenario-gen/
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ cp -r . ~/.claude/skills/maestro-scenario-gen/
 ### Analyze Widgets
 
 ```bash
-python scripts/analyze_widgets.py path/to/flutter/lib/
+python ~/.claude/skills/maestro-scenario-gen/scripts/analyze_widgets.py path/to/flutter/lib/
 
 # Options:
 # --json    Output as JSON for further processing
@@ -33,18 +33,11 @@ python scripts/analyze_widgets.py path/to/flutter/lib/
 
 ```bash
 # List available flow types
-python scripts/generate_scenario.py --list
+python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py --list
 
 # Generate a specific flow
-python scripts/generate_scenario.py com.example.app login
-python scripts/generate_scenario.py com.example.app game
-python scripts/generate_scenario.py com.example.app undo-redo
-```
-
-### Run Maestro Tests
-
-```bash
-maestro test -e APP_ID=com.example.app scenario.yaml
+python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py com.example.app login
+python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py com.example.app game
 ```
 
 ## Selector Priority
@@ -61,7 +54,6 @@ maestro test -e APP_ID=com.example.app scenario.yaml
 ```
 maestro-scenario-gen/
 ├── SKILL.md              # Main skill documentation
-├── EVALUATION.md         # Evaluation report
 ├── README.md             # This file
 ├── scripts/
 │   ├── analyze_widgets.py    # Widget analysis script
