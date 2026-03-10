@@ -4,8 +4,9 @@ description: |
   Generate Maestro E2E test scenarios from Flutter code with self-healing capabilities.
 
   Use this skill when the user wants to:
-  - Generate Maestro YAML test flows from existing Flutter/Dart code
+  - Generate Maestro YAML test flows and scenarios from existing Flutter/Dart code
   - Create E2E tests for mobile apps using Maestro
+  - Organize tests into flows (reusable sequences) and scenarios (AAA user stories)
   - Fix failing Maestro tests by adjusting code or scenarios
   - Add semantic identifiers to Flutter widgets for testing
   - Debug why Maestro cannot find elements
@@ -63,6 +64,162 @@ When generating Maestro scenarios, follow this priority order:
    ```
 
 **NEVER resort to point coordinates.** If an element cannot be identified, fix the code.
+
+## Test Organization: Flows vs Scenarios
+
+Maestro tests are organized into two types: **flows** (reusable sequences) and **scenarios** (full user stories with assertions).
+
+### Folder Structure
+
+Mirror the app's feature structure:
+
+```
+maestro/
+├── auth/
+│   ├── flows/
+│   │   ├── login.yaml
+│   │   └── logout.yaml
+│   └── scenarios/
+│       ├── login-success.yaml
+│       └── invalid-email-error.yaml
+├── cart/
+│   ├── flows/
+│   │   ├── add-item.yaml
+│   │   └── remove-item.yaml
+│   └── scenarios/
+│       ├── checkout-guest.yaml
+│       └── checkout-with-discount.yaml
+├── profile/
+│   ├── flows/
+│   │   └── navigate-to-profile.yaml
+│   └── scenarios/
+│       └── update-avatar.yaml
+└── shared/
+    └── flows/
+        ├── launch-app.yaml
+        └── accept-permissions.yaml
+```
+
+### Flows (Reusable Sequences)
+
+Flows are **reusable action sequences** with **no assertions**. They set up state or perform common actions.
+
+**When to create a flow:**
+- Login/logout sequences
+- Navigation to a screen
+- Adding items to cart
+- Form filling
+- Accepting permissions
+
+**Flow template:**
+```yaml
+appId: com.example.app
+---
+# Flow: Login
+# Reusable login sequence - no assertions
+- tapOn:
+    id: "email_field"
+- inputText: "user@example.com"
+- tapOn:
+    id: "password_field"
+- inputText: "password123"
+- tapOn: "Sign In"
+- waitForAnimationToEnd:
+    timeout: 2000
+```
+
+**Rules for flows:**
+1. No `assertVisible` or `assertNotVisible`
+2. End with `waitForAnimationToEnd` if state change occurs
+3. Keep focused on one action sequence
+4. Can be composed into other flows or scenarios
+
+### Scenarios (Full User Stories)
+
+Scenarios are **complete test cases** with **Arrange-Act-Assert** structure and **at least one assertion**.
+
+**When to create a scenario:**
+- Testing a user story
+- Validating error handling
+- Edge case testing
+- Happy path + assertions
+
+**Scenario template (explicit AAA):**
+```yaml
+appId: com.example.app
+---
+# Scenario: Guest checkout with items in cart
+# User Story: As a guest, I want to checkout so that I can purchase without account
+
+# Arrange
+- runFlow: ../flows/add-item.yaml
+
+# Act
+- tapOn: "Checkout"
+- tapOn: "Continue as Guest"
+
+# Assert
+- assertVisible: "Shipping Address"
+- assertVisible: "Payment Method"
+- assertNotVisible: "Login Required"
+```
+
+**Rules for scenarios:**
+1. Always have explicit `# Arrange`, `# Act`, `# Assert` comments
+2. Must include at least one assertion
+3. Use `runFlow` to include reusable flows
+4. One scenario = one user story
+5. Name file after the story: `guest-checkout.yaml`, `invalid-email-error.yaml`
+
+### Arrange-Act-Assert Breakdown
+
+| Section | Purpose | Typical Commands |
+|---------|---------|------------------|
+| **Arrange** | Set up preconditions | `launchApp`, `runFlow`, `inputText`, navigation |
+| **Act** | Perform the action being tested | `tapOn`, `swipe`, `inputText` on target element |
+| **Assert** | Verify expected outcome | `assertVisible`, `assertNotVisible`, `extendedWaitUntil` |
+
+### Composing Flows into Scenarios
+
+```yaml
+# Scenario: User updates profile and sees changes
+appId: com.example.app
+---
+
+# Arrange
+- runFlow: ../shared/flows/launch-app.yaml
+- runFlow: ../flows/login.yaml
+- runFlow: ../flows/navigate-to-profile.yaml
+
+# Act
+- tapOn:
+    id: "edit_profile_button"
+- tapOn:
+    id: "display_name_field"
+- inputText: "New Name"
+- tapOn: "Save"
+
+# Assert
+- assertVisible: "Profile updated"
+- assertVisible: "New Name"
+```
+
+### Generation Rules
+
+When generating Maestro tests from code:
+
+1. **Analyze feature folder** → Mirror structure in `maestro/<feature>/`
+2. **Identify reusable sequences** → Extract to `flows/`
+3. **Each scenario** → One user story with explicit AAA sections
+4. **Flows end** → When state is ready, no assertions
+5. **Scenarios end** → With assertions proving the story
+
+### Quick Reference
+
+| Type | Assertions | Reusable | Purpose |
+|------|------------|----------|---------|
+| Flow | ❌ No | ✅ Yes | Reusable action sequence |
+| Scenario | ✅ Yes | ❌ No | Test a user story |
 
 ## When Code Needs Modification
 
@@ -263,28 +420,54 @@ Choose the minimal fix:
 
 ## Scenario Generation Process
 
-When asked to generate a Maestro scenario from code:
+When asked to generate a Maestro test from code:
 
-### 1. Analyze the User Flow
-- Identify the starting screen
-- Map each user action (tap, input, swipe)
-- Identify expected outcomes (assertions)
+### 1. Identify the Test Type
+- **Is it reusable?** → Create a **flow** (login, navigation, form fill)
+- **Does it verify behavior?** → Create a **scenario** with AAA structure
 
-### 2. For Each Interactive Element
+### 2. Analyze the Feature
+- Find corresponding feature folder in codebase
+- Mirror structure in `maestro/<feature>/flows/` or `maestro/<feature>/scenarios/`
+- Check for existing flows that can be reused
+
+### 3. For Each Interactive Element
 - Check if it has visible text → use text selector
 - Check if it's an icon/image → ensure semantic identifier exists
 - Check if it's custom → ensure `Semantics(container: true)`
 
-### 3. Generate the YAML
-- Start with `appId` and `---`
-- Add `launchApp` if needed
-- Add interaction steps
-- Add assertions for verification
-- Add waits for animations
+### 4. Generate the YAML
 
-### 4. Review for Fragility
+**For flows:**
+```yaml
+appId: com.example.app
+---
+# Flow: [description]
+- [actions only, no assertions]
+- waitForAnimationToEnd  # if state changes
+```
+
+**For scenarios:**
+```yaml
+appId: com.example.app
+---
+# Scenario: [name]
+# User Story: [as a user, I want... so that...]
+
+# Arrange
+- [setup steps, runFlow]
+
+# Act
+- [the action being tested]
+
+# Assert
+- [verify expected outcome]
+```
+
+### 5. Review for Quality
 - No point coordinates? ✓
-- No hardcoded timeouts? ✓
+- Flows have no assertions? ✓
+- Scenarios have explicit AAA? ✓
 - Selectors are unique? ✓
 - Animations handled? ✓
 
@@ -631,10 +814,19 @@ When debugging test failures:
 ## Quality Checklist
 
 A good Maestro test suite should:
-1. Have no point coordinates (all text or ID based)
-2. Use semantic identifiers for icon-only buttons
-3. Wait for animations before assertions
-4. Test one user flow per file
-5. Have clear, descriptive identifiers
-6. **Cover edge cases** - invalid input, incomplete forms, loading states
-7. **Handle error states gracefully** - network errors, validation errors
+
+### Structure
+1. **Flows vs Scenarios** - Flows are reusable (no assertions), scenarios test stories (with assertions)
+2. **Feature folders** - Mirror app structure in `maestro/<feature>/flows/` and `scenarios/`
+3. **Explicit AAA** - Scenarios have Arrange, Act, Assert sections
+
+### Selectors
+4. No point coordinates (all text or ID based)
+5. Use semantic identifiers for icon-only buttons
+6. Clear, descriptive identifiers matching code
+
+### Reliability
+7. Wait for animations before assertions
+8. One user story per scenario file
+9. Cover edge cases - invalid input, incomplete forms, loading states
+10. Handle error states gracefully - network errors, validation errors
