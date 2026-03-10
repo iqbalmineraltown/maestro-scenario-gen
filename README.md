@@ -1,13 +1,12 @@
-# Maestro Scenario Generator
+# Maestro Widget Analyzer
 
-A Claude Code skill for generating Maestro E2E test scenarios from Flutter code with self-healing capabilities.
+A Claude Code skill for analyzing Flutter widgets and ensuring they have proper semantic identifiers for Maestro E2E testing.
 
 ## Features
 
 - **Widget Analysis**: Detects Flutter widgets that need semantic identifiers for Maestro testing
-- **Scenario Generation**: Creates Maestro YAML test flows from templates
 - **Self-Healing Guidance**: Diagnostic help for fixing failing tests
-- **Multiple Flow Types**: login, signup, game, resource, navigation, form, list, undo-redo, dialog
+- **Context-Aware**: Recognizes custom wrapper patterns to avoid false positives
 
 ## Installation
 
@@ -16,8 +15,6 @@ A Claude Code skill for generating Maestro E2E test scenarios from Flutter code 
 ```bash
 npx openskills install iqbalmineraltown/maestro-scenario-gen
 ```
-
-That's it! The skill will be installed and ready to use in Claude Code.
 
 ### Manual Install
 
@@ -39,17 +36,6 @@ python ~/.claude/skills/maestro-scenario-gen/scripts/analyze_widgets.py path/to/
 # --quiet   Only show issues, no summary
 ```
 
-### Generate Scenarios
-
-```bash
-# List available flow types
-python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py --list
-
-# Generate a specific flow
-python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py com.example.app login
-python ~/.claude/skills/maestro-scenario-gen/scripts/generate_scenario.py com.example.app game
-```
-
 ## Selector Priority
 
 1. **Text selector** - Use when element has visible, stable text
@@ -66,8 +52,7 @@ maestro-scenario-gen/
 ├── SKILL.md              # Main skill documentation
 ├── README.md             # This file
 ├── scripts/
-│   ├── analyze_widgets.py    # Widget analysis script
-│   └── generate_scenario.py  # Scenario generation script
+│   └── analyze_widgets.py    # Widget analysis script
 └── references/
     ├── commands.md           # Maestro command reference
     └── flutter-semantics.md  # Flutter Semantics guide
