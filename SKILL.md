@@ -16,9 +16,8 @@ description: |
   The skill prioritizes text-based selectors over coordinates and helps wrap widgets
   with Semantics when needed for reliable element identification.
 
-  Includes helper scripts:
+  Includes helper script:
   - scripts/analyze_widgets.py: Detect widgets needing semantic identifiers
-  - scripts/generate_scenario.py: Generate YAML scenarios from widget analysis
 ---
 
 # Maestro Scenario Generator
@@ -207,6 +206,9 @@ Choose the minimal fix:
 - inputRandomEmail
 - inputRandomPersonName
 - inputRandomNumber
+
+# Back navigation
+- pressBack
 ```
 
 ### Assertions
@@ -238,6 +240,14 @@ Choose the minimal fix:
 - extendedWaitUntil:
     visible: "Loaded Content"
     timeout: 10000
+
+# Conditional wait
+- runFlow:
+    when:
+      visible: "Loading"
+    commands:
+      - waitForAnimationToEnd:
+          timeout: 5000
 ```
 
 ### Swiping & Scrolling
@@ -281,53 +291,243 @@ When asked to generate a Maestro scenario from code:
 - Selectors are unique? ✓
 - Animations handled? ✓
 
-## Example: Login Flow
+## Edge Case Testing
 
-Given Flutter code for a login screen:
+Edge cases are critical for robust E2E tests. Always consider these scenarios:
 
-```dart
-class LoginScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          Text('Welcome Back', style: headlineLarge),
-          TextField(
-            decoration: InputDecoration(hintText: 'Email'),
-          ),
-          TextField(
-            decoration: InputDecoration(hintText: 'Password'),
-            obscureText: true,
-          ),
-          ElevatedButton(
-            onPressed: _login,
-            child: Text('Sign In'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-```
+### Invalid Input Handling
 
-Generated Maestro scenario:
+Test how the app responds to invalid data:
 
 ```yaml
-appId: com.example.app
----
-- launchApp
-- assertVisible: "Welcome Back"
+# Invalid email format
 - tapOn:
-    text: ".*Email.*"
-- inputText: "test@example.com"
+    id: "email_field"
+- inputText: "notanemail"
+- tapOn: "Submit"
+- assertVisible: "Invalid email"  # Error message should appear
+- assertVisible: "Submit"         # Button still visible (form not submitted)
+
+# Invalid password (too short)
 - tapOn:
-    text: ".*Password.*"
-- inputText: "securepassword123"
-- tapOn: "Sign In"
+    id: "password_field"
+- inputText: "123"
+- tapOn: "Submit"
+- assertVisible: "Password must be at least 8 characters"
+
+# Special characters in input
+- tapOn:
+    id: "name_field"
+- inputText: "<script>alert('xss')</script>"
+- tapOn: "Submit"
+- assertVisible: "Invalid characters"  # Or verify sanitization
+
+# Empty required field
+- tapOn:
+    id: "email_field"
+- inputText: ""
+- tapOn: "Submit"
+- assertVisible: "Email is required"
+```
+
+### Incomplete Form Handling
+
+Test form validation with partially filled fields:
+
+```yaml
+# Submit empty form
+- tapOn: "Submit"
+- assertVisible: "Please fill all required fields"
+
+# Partially filled form
+- tapOn:
+    id: "name_field"
+- inputText: "John Doe"
+- tapOn: "Submit"
+- assertVisible: "Email is required"
+- assertNotVisible: "Success"  # Ensure form wasn't submitted
+
+# Field cleared after error
+- tapOn:
+    id: "email_field"
+- inputText: "invalid"
+- tapOn: "Submit"
+- assertVisible: "Invalid email"
+- tapOn:  # Tap field again
+    id: "email_field"
+- inputText: "valid@email.com"  # User corrects input
+- tapOn: "Submit"
+- assertVisible: "Success"
+```
+
+### Loading State Interactions
+
+Test behavior during async operations:
+
+```yaml
+# Tap button during loading
+- tapOn:
+    id: "submit_button"
+- assertVisible: "Loading..."  # Or loading spinner
+# Try to tap again - should be disabled or ignored
+- tapOn:
+    id: "submit_button"
 - waitForAnimationToEnd:
-    timeout: 3000
-- assertVisible: "Dashboard"
+    timeout: 5000
+- assertVisible: "Success"
+
+# Navigate away during loading
+- tapOn:
+    id: "load_data_button"
+- assertVisible: "Loading"
+- pressBack  # User navigates away
+- assertVisible: "Home Screen"  # Loading should be cancelled or handled
+
+# Timeout handling
+- tapOn:
+    id: "slow_request_button"
+- extendedWaitUntil:
+    visible: "Result"
+    timeout: 30000  # Long timeout for slow network
+- assertNotVisible: "Error"  # Should succeed, not timeout
+```
+
+### Network/Async Error States
+
+```yaml
+# Network error
+- tapOn:
+    id: "fetch_data_button"
+- extendedWaitUntil:
+    visible: "Network Error"
+    timeout: 10000
+- assertVisible: "Retry"
+- tapOn: "Retry"  # User can retry
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Data Loaded"
+
+# Server error
+- tapOn:
+    id: "submit_form"
+- extendedWaitUntil:
+    visible: "Something went wrong"
+    timeout: 10000
+- assertVisible: "Try Again"
+```
+
+### Rapid/Repeated Interactions
+
+```yaml
+# Rapid button taps
+- repeat:
+    times: 5
+    commands:
+      - tapOn:
+          id: "submit_button"
+- assertVisible: "Success"  # Only one submission should occur
+
+# Spam refresh
+- repeat:
+    times: 10
+    commands:
+      - tapOn:
+          id: "refresh_button"
+- assertVisible: "Content"  # App should handle gracefully
+```
+
+### Boundary Values
+
+```yaml
+# Minimum value (should not go negative)
+- repeat:
+    times: 5
+    commands:
+      - tapOn:
+          id: "quantity_decrement"
+- assertVisible:
+    id: "quantity_value"  # Should be 0, not negative
+
+# Maximum value / overflow
+- repeat:
+    times: 100
+    commands:
+      - tapOn:
+          id: "quantity_increment"
+- assertVisible:
+    id: "quantity_value"  # Should cap at max, not overflow
+```
+
+### Empty States
+
+```yaml
+# Empty list
+- tapOn:
+    id: "orders_tab"
+- assertVisible: "No orders yet"
+- assertVisible: "Start Shopping"  # Call to action
+
+# Empty search results
+- tapOn:
+    id: "search_field"
+- inputText: "zzzzzzzzz"
+- tapOn: "Search"
+- assertVisible: "No results found"
+- assertVisible: "Try different keywords"
+```
+
+### Session/State Edge Cases
+
+```yaml
+# Session expired during use
+- launchApp
+- # ... some actions
+- killApp
+- launchApp
+- assertVisible: "Login"  # Session expired, redirect to login
+
+# State persistence
+- tapOn:
+    id: "add_to_cart"
+- killApp
+- launchApp
+- tapOn:
+    id: "cart_icon"
+- assertVisible: "1 item"  # Cart persisted
+
+# Concurrent state changes
+- tapOn:
+    id: "item_1"
+- tapOn: "Add to Cart"
+- pressBack
+- tapOn:
+    id: "item_2"
+- tapOn: "Add to Cart"
+- tapOn:
+    id: "cart_icon"
+- assertVisible: "2 items"
+```
+
+### Dialog/Modal Edge Cases
+
+```yaml
+# Dismiss dialog with back button
+- tapOn:
+    id: "delete_button"
+- assertVisible: "Delete Item?"
+- pressBack
+- assertNotVisible: "Delete Item?"
+- assertVisible: "Item"  # Item still exists
+
+# Dialog during loading
+- tapOn:
+    id: "submit_button"
+- assertVisible: "Loading"
+- pressBack  # Try to dismiss
+- assertVisible: "Loading"  # Should still be visible (can't dismiss during load)
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible: "Success"
 ```
 
 ## Common Patterns
@@ -375,54 +575,6 @@ appId: com.example.app
     id: "quantity_decrement"
 - assertVisible:
     id: "quantity_display"
-```
-
-## Edge Case Testing Patterns
-
-### Boundary Value Testing
-```yaml
-# Test minimum values (should not go below 0)
-- repeat:
-    times: 5
-    commands:
-      - tapOn:
-          id: "quantity_decrement"
-- assertVisible:
-    id: "quantity_display"
-```
-
-### Empty State Testing
-```yaml
-- tapOn:
-    id: "cart_button"
-- assertVisible: "Your cart is empty"
-- pressBack
-```
-
-### Rapid Interaction Testing
-```yaml
-- repeat:
-    times: 10
-    commands:
-      - tapOn:
-          id: "like_button"
-```
-
-### State Persistence Testing
-```yaml
-# Make changes
-- tapOn:
-    id: "add_item_button"
-- waitForAnimationToEnd:
-    timeout: 500
-# Kill and restart
-- killApp
-- launchApp
-- waitForAnimationToEnd:
-    timeout: 3000
-# Verify state persisted
-- assertVisible:
-    id: "item_display"
 ```
 
 ## Self-Healing Patterns
@@ -473,18 +625,6 @@ The script:
 - Recognizes custom wrapper methods to avoid false positives
 - Suggests fixes for each issue found
 
-### generate_scenario.py
-
-Generates Maestro YAML scenarios from widget analysis:
-
-```bash
-# List available Maestro commands
-python scripts/generate_scenario.py --list
-
-# Generate from analysis output
-python scripts/generate_scenario.py com.example.app --from-analysis analysis.json
-```
-
 ## Running Maestro Tests
 
 ```bash
@@ -496,6 +636,9 @@ maestro test -e APP_ID=com.example.app maestro/
 
 # Run with specific device
 maestro test -e APP_ID=com.example.app --udid emulator-5554 scenario.yaml
+
+# Debug element hierarchy
+maestro hierarchy
 ```
 
 ## Debugging Tips
@@ -515,3 +658,5 @@ A good Maestro test suite should:
 3. Wait for animations before assertions
 4. Test one user flow per file
 5. Have clear, descriptive identifiers
+6. **Cover edge cases** - invalid input, incomplete forms, loading states
+7. **Handle error states gracefully** - network errors, validation errors
