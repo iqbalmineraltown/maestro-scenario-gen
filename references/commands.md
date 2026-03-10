@@ -2,6 +2,40 @@
 
 Complete reference for Maestro YAML commands.
 
+## Flow Header Fields
+
+Maestro flows support these header fields (before `---`):
+
+| Field | Required | Purpose | Example |
+|-------|----------|---------|---------|
+| `appId` | Yes* | Mobile app package ID | `com.example.app` |
+| `url` | Yes* | Web app URL (alternative to appId) | `https://example.com` |
+| `name` | No | Human-readable flow name | `Login flow` |
+| `tags` | No | Tags for filtering and reports | `[auth, smoke]` |
+| `properties` | No | Custom metadata for reports | `priority: high` |
+| `env` | No | Environment variables | `USERNAME: test` |
+| `onFlowStart` | No | Commands to run before flow | `- launchApp` |
+| `onFlowComplete` | No | Commands to run after flow | `- killApp` |
+
+*Either `appId` or `url` is required.
+
+**Example:**
+```yaml
+appId: com.example.app
+name: Login flow
+# Standard login with valid credentials
+tags:
+  - auth
+  - smoke
+properties:
+  priority: high
+env:
+  USERNAME: testuser
+---
+- launchApp
+- tapOn: "Sign In"
+```
+
 ## Interaction Commands
 
 ### tapOn

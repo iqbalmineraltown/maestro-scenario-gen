@@ -114,9 +114,12 @@ Flows are **reusable action sequences** with **no assertions**. They set up stat
 **Flow template:**
 ```yaml
 appId: com.example.app
+name: Login
+# Standard login flow with valid credentials
+tags:
+  - auth
+  - smoke
 ---
-# Flow: Login
-# Reusable login sequence - no assertions
 - tapOn:
     id: "email_field"
 - inputText: "user@example.com"
@@ -147,10 +150,14 @@ Scenarios are **complete test cases** with **Arrange-Act-Assert** structure and 
 **Scenario template (explicit AAA):**
 ```yaml
 appId: com.example.app
+name: Guest checkout with items
+# As a guest, I want to checkout so I can purchase without an account
+tags:
+  - cart
+  - checkout
+properties:
+  priority: high
 ---
-# Scenario: Guest checkout with items in cart
-# User Story: As a guest, I want to checkout so that I can purchase without account
-
 # Arrange
 - runFlow: ../flows/add-item.yaml
 
@@ -171,6 +178,25 @@ appId: com.example.app
 4. One scenario = one user story
 5. Name file after the story: `guest-checkout.yaml`, `invalid-email-error.yaml`
 
+### Header Fields Reference
+
+Maestro supports these header fields (before `---`):
+
+| Field | Required | Purpose | Example |
+|-------|----------|---------|---------|
+| `appId` | Yes* | Mobile app package ID | `com.example.app` |
+| `url` | Yes* | Web app URL (alternative to appId) | `https://example.com` |
+| `name` | No | Human-readable flow/scenario name | `Login flow` |
+| `tags` | No | Tags for filtering and reports | `[auth, smoke]` |
+| `properties` | No | Custom metadata for reports | `priority: high` |
+| `env` | No | Environment variables | `USERNAME: test` |
+| `onFlowStart` | No | Commands to run before flow | `- launchApp` |
+| `onFlowComplete` | No | Commands to run after flow | `- killApp` |
+
+*Either `appId` or `url` is required.
+
+**Description convention:** Use a comment line directly under `name` for human-readable description.
+
 ### Arrange-Act-Assert Breakdown
 
 | Section | Purpose | Typical Commands |
@@ -182,10 +208,13 @@ appId: com.example.app
 ### Composing Flows into Scenarios
 
 ```yaml
-# Scenario: User updates profile and sees changes
 appId: com.example.app
+name: Update profile and verify changes
+# User updates their display name and sees the change reflected
+tags:
+  - profile
+  - settings
 ---
-
 # Arrange
 - runFlow: ../shared/flows/launch-app.yaml
 - runFlow: ../flows/login.yaml
@@ -441,8 +470,11 @@ When asked to generate a Maestro test from code:
 **For flows:**
 ```yaml
 appId: com.example.app
+name: [short name]
+# [description as comment]
+tags:
+  - [feature]
 ---
-# Flow: [description]
 - [actions only, no assertions]
 - waitForAnimationToEnd  # if state changes
 ```
@@ -450,10 +482,13 @@ appId: com.example.app
 **For scenarios:**
 ```yaml
 appId: com.example.app
+name: [short name]
+# [user story as comment]
+tags:
+  - [feature]
+properties:
+  priority: [low|medium|high]
 ---
-# Scenario: [name]
-# User Story: [as a user, I want... so that...]
-
 # Arrange
 - [setup steps, runFlow]
 
