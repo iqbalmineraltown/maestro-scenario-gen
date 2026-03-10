@@ -18,9 +18,7 @@ description: |
 
   Includes helper scripts:
   - scripts/analyze_widgets.py: Detect widgets needing semantic identifiers
-  - scripts/generate_scenario.py: Generate YAML scenarios from templates
-
-  Supports flow types: login, signup, game, resource, navigation, form, list, undo-redo, dialog
+  - scripts/generate_scenario.py: Generate YAML scenarios from widget analysis
 ---
 
 # Maestro Scenario Generator
@@ -297,7 +295,6 @@ class LoginScreen extends StatelessWidget {
           Text('Welcome Back', style: headlineLarge),
           TextField(
             decoration: InputDecoration(hintText: 'Email'),
-            // Should add: key or semantic identifier
           ),
           TextField(
             decoration: InputDecoration(hintText: 'Password'),
@@ -306,10 +303,6 @@ class LoginScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: _login,
             child: Text('Sign In'),
-          ),
-          TextButton(
-            onPressed: _forgotPassword,
-            child: Text('Forgot Password?'),
           ),
         ],
       ),
@@ -335,18 +328,6 @@ appId: com.example.app
 - waitForAnimationToEnd:
     timeout: 3000
 - assertVisible: "Dashboard"
-```
-
-If the text fields don't have detectable text, the code fix would be:
-
-```dart
-Semantics(
-  identifier: 'email_field',
-  container: true,
-  child: TextField(
-    decoration: InputDecoration(hintText: 'Email'),
-  ),
-),
 ```
 
 ## Common Patterns
@@ -377,97 +358,84 @@ Semantics(
 - tapOn: "Settings"
 ```
 
-## Files to Check
-
-When debugging test failures:
-1. `maestro/` - Test scenario YAML files
-2. `lib/` - Flutter widget code
-3. Check for `Semantics` widgets around interactive elements
-4. Verify `identifier` values match what's in YAML
-
-## Tips for Reliable Tests
-
-1. **Use regex for dynamic text** - `.*` for partial matches
-2. **Handle loading states** - Wait for spinners to disappear
-3. **Test the happy path first** - Add error cases later
-4. **Keep scenarios focused** - One user flow per file
-5. **Name identifiers descriptively** - `submit_order_button` not `btn1`
-
-## Game-Specific Testing Patterns
-
-### Terraforming Mars Player Board
-
-This Flutter app has unique patterns that require specific test coverage:
-
-#### Resource Management Patterns
+### Dialog Interaction
 ```yaml
-# Resources have amount and production values
-- assertVisible:
-    id: "resource_card_mc"
-- assertVisible:
-    id: "mc_amount_inc_1"
-- assertVisible:
-    id: "mc_prod_inc_1"
-
-# All resources follow this pattern:
-# mc, steel, titanium, plants, energy, heat
-# Buttons: _amount_inc_1, _amount_inc_5, _amount_inc_10
-#           _amount_dec_1, _amount_dec_5, _amount_dec_10
-#           _prod_inc_1, _prod_dec_1 (production only has +/-1)
+- tapOn:
+    id: "delete_button"
+- assertVisible: "Delete Item?"
+- tapOn: "Cancel"
+- assertNotVisible: "Delete Item?"
 ```
 
-#### Generation Tracking Pattern
+### Counter/Value Controls
 ```yaml
-# Generation can only increment via production phase
 - tapOn:
-    id: "generation_increment"
-- assertVisible: "Production Phase"
-- tapOn: "Confirm"
+    id: "quantity_increment"
+- tapOn:
+    id: "quantity_decrement"
 - assertVisible:
-    id: "generation_display"
+    id: "quantity_display"
 ```
 
-#### Terraform Rating (TR) Pattern
+## Edge Case Testing Patterns
+
+### Boundary Value Testing
 ```yaml
-# TR can be incremented or decremented
-- tapOn:
-    id: "tr_increment"
-- tapOn:
-    id: "tr_decrement"
+# Test minimum values (should not go below 0)
+- repeat:
+    times: 5
+    commands:
+      - tapOn:
+          id: "quantity_decrement"
+- assertVisible:
+    id: "quantity_display"
 ```
 
-#### Production Phase Flow
+### Empty State Testing
 ```yaml
-# Production phase adds resources based on production values
-# Energy converts to Heat
-# MC gets production + TR
 - tapOn:
-    id: "generation_increment"
+    id: "cart_button"
+- assertVisible: "Your cart is empty"
+- pressBack
+```
+
+### Rapid Interaction Testing
+```yaml
+- repeat:
+    times: 10
+    commands:
+      - tapOn:
+          id: "like_button"
+```
+
+### State Persistence Testing
+```yaml
+# Make changes
+- tapOn:
+    id: "add_item_button"
 - waitForAnimationToEnd:
     timeout: 500
-- assertVisible: "Production Phase"
-- tapOn: "Confirm"
+# Kill and restart
+- killApp
+- launchApp
 - waitForAnimationToEnd:
-    timeout: 1000
+    timeout: 3000
+# Verify state persisted
+- assertVisible:
+    id: "item_display"
 ```
 
-## Conditional Flow Patterns
+## Self-Healing Patterns
 
-### When X vs When Not To Test
-Test both branches of conditional logic:
-
+### Element Not Found After State Change
 ```yaml
-# When a condition should be TRUE
-- assertTrue:
-    condition: "${resource_amount} > 0"
-
-# When a condition should be FALSE
-- assertNotVisible: "Error Message"
+- extendedWaitUntil:
+    visible:
+      id: "updated_content"
+    timeout: 5000
 ```
 
-### Retry and Backoff Strategies
-For flaky elements, use retry patterns:
-
+### Conditional Execution
 ```yaml
 - runFlow:
     when:
@@ -477,96 +445,13 @@ For flaky elements, use retry patterns:
           timeout: 2000
 ```
 
-## Edge Case Testing Strategies
-
-### Boundary Value Testing
+### Retry for Flaky Elements
 ```yaml
-# Test minimum values (should not go below 0)
-- tapOn:
-    id: "mc_amount_dec_10"
-- tapOn:
-    id: "mc_amount_dec_10"
-# Verify value is 0, not negative
-
-# Test maximum values (stress test)
-- repeat:
-    times: 100
-    commands:
-      - tapOn:
-          id: "mc_amount_inc_10"
-```
-
-### Empty State Testing
-```yaml
-# Test empty history
-- tapOn:
-    id: "history_button"
-- assertVisible: "No actions yet"
-- pressBack
-```
-
-### Cancel Dialog Testing
-```yaml
-# Test canceling dialogs
-- tapOn:
-    id: "reset_button"
-- assertVisible: "Reset Game?"
-- tapOn: "Cancel"
-- assertNotVisible: "Reset Game?"
-```
-
-### Rapid Interaction Testing
-```yaml
-# Rapid button tapping
-- repeat:
-    times: 10
-    commands:
-      - tapOn:
-          id: "mc_amount_inc_1"
-```
-
-## Self-Healing Error Patterns (Game Apps)
-
-### Element Not Found After State Change
-```yaml
-# If resource display not found, wait for animation
-- extendedWaitUntil:
-    visible:
-      id: "generation_display"
-    timeout: 5000
-```
-
-### Dialog Not Dismissing
-```yaml
-# If dialog doesn't dismiss, try again
 - runFlow:
     when:
       visible: "Confirm"
     commands:
       - tapOn: "Confirm"
-```
-
-### State Synchronization
-```yaml
-# Wait for state to update before next action
-- tapOn:
-    id: "mc_amount_inc_10"
-- waitForAnimationToEnd:
-    timeout: 500
-```
-
-## Assertion Verification
-
-### Verify State After Actions
-```yaml
-# After incrementing MC by 10
-- tapOn:
-    id: "mc_amount_inc_10"
-- waitForAnimationToEnd:
-    timeout: 500
-# Note: Maestro can't read actual values, but we can verify UI state
-- assertVisible:
-    id: "mc_amount_display"
 ```
 
 ## Helper Scripts
@@ -590,31 +475,15 @@ The script:
 
 ### generate_scenario.py
 
-Generates Maestro YAML scenarios from templates:
+Generates Maestro YAML scenarios from widget analysis:
 
 ```bash
-# List available flow types
+# List available Maestro commands
 python scripts/generate_scenario.py --list
-
-# Generate a specific flow
-python scripts/generate_scenario.py com.example.app login
-python scripts/generate_scenario.py com.example.app game
-python scripts/generate_scenario.py com.example.app undo-redo
 
 # Generate from analysis output
 python scripts/generate_scenario.py com.example.app --from-analysis analysis.json
 ```
-
-Available flow types:
-- `login` - Standard login flow
-- `signup` - Standard signup/registration flow
-- `game` - Game smoke test (verify UI loads)
-- `resource` - Resource management test (increment/decrement)
-- `undo-redo` - Undo/redo functionality test
-- `navigation` - Navigation between screens
-- `form` - Form input and submission
-- `list` - List scrolling and item interaction
-- `dialog` - Dialog display and interaction
 
 ## Running Maestro Tests
 
@@ -629,7 +498,16 @@ maestro test -e APP_ID=com.example.app maestro/
 maestro test -e APP_ID=com.example.app --udid emulator-5554 scenario.yaml
 ```
 
-## Evaluating Test Quality
+## Debugging Tips
+
+When debugging test failures:
+1. Check `maestro/` - Test scenario YAML files
+2. Check `lib/` - Flutter widget code
+3. Use `maestro hierarchy` to verify elements are detectable
+4. Verify `Semantics` widgets wrap interactive elements
+5. Check that `identifier` values match between code and YAML
+
+## Quality Checklist
 
 A good Maestro test suite should:
 1. Have no point coordinates (all text or ID based)
@@ -637,5 +515,3 @@ A good Maestro test suite should:
 3. Wait for animations before assertions
 4. Test one user flow per file
 5. Have clear, descriptive identifiers
-
-Use `maestro hierarchy` to verify elements are detectable.
