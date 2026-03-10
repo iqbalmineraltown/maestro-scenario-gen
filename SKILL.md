@@ -15,9 +15,6 @@ description: |
 
   The skill prioritizes text-based selectors over coordinates and helps wrap widgets
   with Semantics when needed for reliable element identification.
-
-  Includes helper script:
-  - scripts/analyze_widgets.py: Detect widgets needing semantic identifiers
 ---
 
 # Maestro Scenario Generator
@@ -605,25 +602,6 @@ Test behavior during async operations:
     commands:
       - tapOn: "Confirm"
 ```
-
-## Helper Scripts
-
-### analyze_widgets.py
-
-Analyzes Flutter code to find widgets that may need semantic identifiers:
-
-```bash
-python scripts/analyze_widgets.py lib/
-
-# Options:
-# --json    Output as JSON for further processing
-# --quiet   Only show issues, no summary
-```
-
-The script:
-- Detects widgets without semantic identifiers
-- Recognizes custom wrapper methods to avoid false positives
-- Suggests fixes for each issue found
 
 ## Running Maestro Tests
 

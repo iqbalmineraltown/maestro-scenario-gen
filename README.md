@@ -1,12 +1,13 @@
-# Maestro Widget Analyzer
+# Maestro Scenario Generator
 
-A Claude Code skill for analyzing Flutter widgets and ensuring they have proper semantic identifiers for Maestro E2E testing.
+A Claude Code skill for generating Maestro E2E test scenarios from Flutter code with self-healing capabilities.
 
 ## Features
 
-- **Widget Analysis**: Detects Flutter widgets that need semantic identifiers for Maestro testing
+- **Scenario Generation**: Generate Maestro YAML flows from Flutter/Dart code
 - **Self-Healing Guidance**: Diagnostic help for fixing failing tests
-- **Context-Aware**: Recognizes custom wrapper patterns to avoid false positives
+- **Edge Case Testing**: Comprehensive patterns for invalid input, loading states, error handling
+- **Best Practices**: Text-based selectors, semantic identifiers, never coordinates
 
 ## Installation
 
@@ -19,21 +20,8 @@ npx openskills install iqbalmineraltown/maestro-scenario-gen
 ### Manual Install
 
 ```bash
-# Clone the repository
 git clone https://github.com/iqbalmineraltown/maestro-scenario-gen.git
 cp -r maestro-scenario-gen/* ~/.claude/skills/maestro-scenario-gen/
-```
-
-## Usage
-
-### Analyze Widgets
-
-```bash
-python ~/.claude/skills/maestro-scenario-gen/scripts/analyze_widgets.py path/to/flutter/lib/
-
-# Options:
-# --json    Output as JSON for further processing
-# --quiet   Only show issues, no summary
 ```
 
 ## Selector Priority
@@ -51,10 +39,8 @@ python ~/.claude/skills/maestro-scenario-gen/scripts/analyze_widgets.py path/to/
 maestro-scenario-gen/
 ├── SKILL.md              # Main skill documentation
 ├── README.md             # This file
-├── scripts/
-│   └── analyze_widgets.py    # Widget analysis script
 └── references/
-    ├── commands.md           # Maestro command reference
+    ├── commands.md       # Maestro command reference
     └── flutter-semantics.md  # Flutter Semantics guide
 ```
 
